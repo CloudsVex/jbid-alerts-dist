@@ -1,0 +1,48 @@
+name: Publish release from artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. v1.8)
+        required: true
+        type: string
+      notes:
+        description: Release notes
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release with committed assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          test -f update.json
+          test -f JBidAlerts.apk
+          python3 - <<'PY'
+          import json, os, pathlib
+          tag = os.environ["TAG"]
+          data = json.loads(pathlib.Path("update.json").read_text())
+          data["apkUrl"] = f"https://github.com/CloudsVex/jbid-alerts-dist/releases/download/{tag}/JBidAlerts.apk"
+          pathlib.Path("update.json").write_text(json.dumps(data, indent=2) + "\n")
+          print(data)
+          PY
+          if gh release view "$TAG" --repo CloudsVex/jbid-alerts-dist >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          gh release create "$TAG" update.json JBidAlerts.apk \
+            --repo CloudsVex/jbid-alerts-dist \
+            --title "$TAG" \
+            --notes "$NOTES"
