@@ -1,0 +1,6 @@
+{
+  "versionCode": 9,
+  "versionName": "1.8",
+  "apkUrl": "https://github.com/CloudsVex/jbid-alerts-dist/releases/download/v1.8/JBidAlerts.apk",
+  "notes": "Settings: auto reminder for new wishlist items with selectable lead time (5/10/15/20/30 min)."
+}
