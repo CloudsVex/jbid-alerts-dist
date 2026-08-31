@@ -1,10 +1,14 @@
-name: Publish release from artifacts
+name: Publish release from URL
 
 on:
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag (e.g. v1.8)
+        required: true
+        type: string
+      apk_url:
+        description: Temporary public APK URL to download
         required: true
         type: string
       notes:
@@ -21,27 +25,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Rebuild APK and create release
+      - name: Download APK and create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag }}
           NOTES: ${{ inputs.notes }}
+          APK_URL: ${{ inputs.apk_url }}
         run: |
           set -euo pipefail
-          test -f update.json
-          test -d staging/apk-b64
-          cat staging/apk-b64/chunk_* | base64 -d > JBidAlerts.apk
+          curl -fL --retry 3 -o JBidAlerts.apk "$APK_URL"
+          ls -la JBidAlerts.apk
           python3 - <<'PY'
           import json, os, pathlib
           tag = os.environ["TAG"]
           data = json.loads(pathlib.Path("update.json").read_text())
+          data["versionCode"] = 9
+          data["versionName"] = "1.8"
           data["apkUrl"] = f"https://github.com/CloudsVex/jbid-alerts-dist/releases/download/{tag}/JBidAlerts.apk"
+          data["notes"] = "Settings: auto reminder for new wishlist items with selectable lead time (5/10/15/20/30 min)."
           pathlib.Path("update.json").write_text(json.dumps(data, indent=2) + "\n")
           print(data)
           PY
-          ls -la JBidAlerts.apk
           if gh release view "$TAG" --repo CloudsVex/jbid-alerts-dist >/dev/null 2>&1; then
-            echo "Release $TAG already exists; uploading assets"
             gh release upload "$TAG" update.json JBidAlerts.apk --clobber --repo CloudsVex/jbid-alerts-dist
           else
             gh release create "$TAG" update.json JBidAlerts.apk \
