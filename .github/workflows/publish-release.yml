@@ -33,9 +33,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ -f trigger-publish.json ]; then
-            TAG=$(python3 -c 'import json; print(json.load(open("trigger-publish.json"))["tag"])')
-            APK_URL=$(python3 -c 'import json; print(json.load(open("trigger-publish.json"))["apk_url"])')
-            NOTES=$(python3 -c 'import json; print(json.load(open("trigger-publish.json")).get("notes",""))')
+            TAG=$(python3 -c 'import json; print(json.load(open("trigger-publish.json")).get("tag") or "")')
+            APK_URL=$(python3 -c 'import json; print(json.load(open("trigger-publish.json")).get("apk_url") or "")')
+            NOTES=$(python3 -c 'import json; print(json.load(open("trigger-publish.json")).get("notes") or "")')
           else
             TAG="${{ inputs.tag }}"
             APK_URL="${{ inputs.apk_url }}"
@@ -43,8 +43,18 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
-          echo "notes=$NOTES" >> "$GITHUB_OUTPUT"
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          if [ -z "$TAG" ] || [ -z "$APK_URL" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Download APK and create release
+        if: steps.meta.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.meta.outputs.tag }}
