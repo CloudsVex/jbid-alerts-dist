@@ -1,6 +1,9 @@
 name: Publish release from URL
 
 on:
+  push:
+    paths:
+      - "trigger-publish.json"
   workflow_dispatch:
     inputs:
       tag:
@@ -25,12 +28,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve inputs
+        id: meta
+        run: |
+          set -euo pipefail
+          if [ -f trigger-publish.json ]; then
+            TAG=$(python3 -c 'import json; print(json.load(open("trigger-publish.json"))["tag"])')
+            APK_URL=$(python3 -c 'import json; print(json.load(open("trigger-publish.json"))["apk_url"])')
+            NOTES=$(python3 -c 'import json; print(json.load(open("trigger-publish.json")).get("notes",""))')
+          else
+            TAG="${{ inputs.tag }}"
+            APK_URL="${{ inputs.apk_url }}"
+            NOTES="${{ inputs.notes }}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
+          echo "notes=$NOTES" >> "$GITHUB_OUTPUT"
       - name: Download APK and create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag }}
-          NOTES: ${{ inputs.notes }}
-          APK_URL: ${{ inputs.apk_url }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          NOTES: ${{ steps.meta.outputs.notes }}
+          APK_URL: ${{ steps.meta.outputs.apk_url }}
         run: |
           set -euo pipefail
           curl -fL --retry 3 -o JBidAlerts.apk "$APK_URL"
@@ -38,11 +57,12 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib
           tag = os.environ["TAG"]
-          data = json.loads(pathlib.Path("update.json").read_text())
-          data["versionCode"] = 9
-          data["versionName"] = "1.8"
-          data["apkUrl"] = f"https://github.com/CloudsVex/jbid-alerts-dist/releases/download/{tag}/JBidAlerts.apk"
-          data["notes"] = "Settings: auto reminder for new wishlist items with selectable lead time (5/10/15/20/30 min)."
+          data = {
+            "versionCode": 9,
+            "versionName": "1.8",
+            "apkUrl": f"https://github.com/CloudsVex/jbid-alerts-dist/releases/download/{tag}/JBidAlerts.apk",
+            "notes": "Settings: auto reminder for new wishlist items with selectable lead time (5/10/15/20/30 min).",
+          }
           pathlib.Path("update.json").write_text(json.dumps(data, indent=2) + "\n")
           print(data)
           PY
