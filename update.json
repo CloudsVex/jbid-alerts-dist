@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "1.8.3",
-  "apkUrl": "https://github.com/CloudsVex/jbid-alerts-dist/releases/download/v1.8.3/JBidAlerts.apk",
-  "notes": "Watch list cleanup: drop picked-up wins and ended/sold items on sync; Dismiss on won cards."
+  "versionCode": 13,
+  "versionName": "1.8.4",
+  "apkUrl": "https://github.com/CloudsVex/jbid-alerts-dist/releases/download/v1.8.4/JBidAlerts.apk",
+  "notes": "Fix update install hang: cancelable download, Install retry, and safer installer launch."
 }

@@ -1,5 +1,5 @@
 {
-  "tag": "",
-  "apk_url": "",
-  "notes": "Idle — update this file to publish a new release."
+  "tag": "v1.8.4",
+  "apk_url": "https://litter.catbox.moe/i2b7d0.apk",
+  "notes": "Fix update install hang: cancelable download, Install retry, and safer installer launch."
 }
