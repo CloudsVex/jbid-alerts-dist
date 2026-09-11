@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (e.g. v1.8)
+        description: Release tag (e.g. v1.8.3)
         required: true
         type: string
       apk_url:
@@ -65,15 +65,34 @@ jobs:
           curl -fL --retry 3 -o JBidAlerts.apk "$APK_URL"
           ls -la JBidAlerts.apk
           python3 - <<'PY'
-          import json, os, pathlib
+          import json, os, pathlib, re
           tag = os.environ["TAG"]
+          notes = os.environ.get("NOTES") or ""
+          # Prefer committed update.json when present and matching this tag.
+          update_path = pathlib.Path("update.json")
+          data = {}
+          if update_path.exists():
+              try:
+                  data = json.loads(update_path.read_text())
+              except Exception:
+                  data = {}
+          version_name = str(data.get("versionName") or "").strip()
+          if not version_name:
+              version_name = tag[1:] if tag.startswith("v") else tag
+          version_code = data.get("versionCode")
+          if not isinstance(version_code, int):
+              # Derive a simple code from semver like 1.8.3 -> 183-ish fallback
+              parts = [int(p) for p in re.findall(r"\d+", version_name)[:3]]
+              while len(parts) < 3:
+                  parts.append(0)
+              version_code = parts[0] * 100 + parts[1] * 10 + parts[2]
           data = {
-            "versionCode": 9,
-            "versionName": "1.8",
-            "apkUrl": f"https://github.com/CloudsVex/jbid-alerts-dist/releases/download/{tag}/JBidAlerts.apk",
-            "notes": "Settings: auto reminder for new wishlist items with selectable lead time (5/10/15/20/30 min).",
+              "versionCode": version_code,
+              "versionName": version_name,
+              "apkUrl": f"https://github.com/CloudsVex/jbid-alerts-dist/releases/download/{tag}/JBidAlerts.apk",
+              "notes": notes or data.get("notes") or f"JBidAlerts {version_name}",
           }
-          pathlib.Path("update.json").write_text(json.dumps(data, indent=2) + "\n")
+          update_path.write_text(json.dumps(data, indent=2) + "\n")
           print(data)
           PY
           if gh release view "$TAG" --repo CloudsVex/jbid-alerts-dist >/dev/null 2>&1; then
