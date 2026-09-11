@@ -1,5 +1,6 @@
 {
   "tag": "v1.8.3",
   "apk_url": "https://litter.catbox.moe/h7cbv7.apk",
-  "notes": "Watch list cleanup: drop picked-up wins and ended/sold items on sync; Dismiss on won cards."
+  "notes": "Watch list cleanup: drop picked-up wins and ended/sold items on sync; Dismiss on won cards.",
+  "force": 1
 }
